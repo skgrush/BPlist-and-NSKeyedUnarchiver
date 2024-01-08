@@ -1,0 +1,27 @@
+{
+  "name": "@skgrush/bplist-and-nskeyedunarchiver",
+  "version": "0.0.1-rc.0",
+  "description": "Tool for deserializing binary plist files and NSKeyedUnarchiver-coded files",
+  "license": "MIT",
+  "author": {
+    "name": "Samuel K. Grush"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/skgrush/BPlist-and-NSKeyedUnarchiver.git"
+  },
+  "keywords": [
+    "plist",
+    "bplist",
+    "NSKeyedUnarchiver"
+  ],
+  "type": "module",
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rimraf dist"
+  }
+}
