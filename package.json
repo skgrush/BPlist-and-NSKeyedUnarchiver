@@ -18,10 +18,13 @@
   "type": "module",
   "dependencies": {},
   "devDependencies": {
+    "@types/node": "^20.10.7",
+    "rimraf": "^5.0.5",
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "build": "tsc",
-    "clean": "rimraf dist"
+    "build": "rimraf dist && tsc",
+    "clean": "rimraf dist dist-spec",
+    "build:test": "rimraf dist-spec && tsc -p ./tsconfig.spec.json"
   }
 }
