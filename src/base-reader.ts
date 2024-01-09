@@ -4,17 +4,27 @@ import { Marker, byteToMarker } from "./markers";
 import { ObjectTableDict } from "./models/object-table-entries";
 import { Uid } from "./models/uid";
 
+export enum ReadIntMethod {
+  unsigned = 1,
+  signed = 2,
+  v00 = 4,
+}
+
 export class BaseReader {
 
-  static readDynamicInt(buffer: ArrayBuffer, offset: number, version: string) {
-    const markerByte = Number(this.readInt(buffer, offset, 1, version));
+  /**
+   * First byte must be a {@link Marker.int} which determines the rest of size of the int.
+   * Reads the marker byte and the rest of the int, returns the int, and the total number of bytes read.
+   */
+  static readDynamicInt(buffer: ArrayBuffer, offset: number, method: ReadIntMethod) {
+    const markerByte = Number(this.readInt(buffer, offset, 1, ReadIntMethod.unsigned));
 
     const markerParts = byteToMarker(markerByte, {} as any);
     if (markerParts?.marker !== Marker.int) {
       throw new Error(`dynamic int was not an int, was ${markerParts?.marker}`);
     }
     const bytes = 2 ** markerParts.lowerNibble;
-    const entry = this.readInt(buffer, offset + 1, bytes, version);
+    const entry = this.readInt(buffer, offset + 1, bytes, method);
     return {
       entry,
       bytesRead: bytes + 1
@@ -25,7 +35,7 @@ export class BaseReader {
    * According to the comments in CFBinaryPList.c, in version='00', ints of size
    * 1|2|4 are always unsigned while ints of size 8|16 are always signed.
    */
-  static readInt(buffer: ArrayBuffer, offset: number, bytes: number, version: string) {
+  static readInt(buffer: ArrayBuffer, offset: number, bytes: number, method: ReadIntMethod) {
     const view = new DataView(buffer, offset, bytes);
     let bits = bytes * 8 as AcceptedBitLength;
 
@@ -33,9 +43,13 @@ export class BaseReader {
       throw new RangeError(`Unexpected byte length for int: ${bytes}`);
     }
 
-    if (version === '00' && (bits == 64 || bits === 128)) {
+    if (method === ReadIntMethod.v00 && (bits == 64 || bits === 128)) {
       bits = -bits as AcceptedBitLength;
     }
+    else if (method === ReadIntMethod.signed) {
+      bits = -bits as AcceptedBitLength;
+    }
+    /// else if (method === ReadIntMethod.unsigned) { default; }
 
     const reader = getDeStructReaderBySize(bits);
     return BigInt(reader(view, 0).value);

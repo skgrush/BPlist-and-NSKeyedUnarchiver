@@ -1,5 +1,5 @@
 import { assert } from "../assert";
-import { BaseReader } from "../base-reader";
+import { BaseReader, ReadIntMethod } from "../base-reader";
 import { bplistMagicNumber, versionByteLength } from "../constants/magic-number";
 import { Marker, byteToMarker, markerPrimitives } from "../markers";
 import { ObjectTableOffset } from "../types/bplist-index-aliases";
@@ -51,7 +51,7 @@ export class ObjectTable extends BaseReader {
     version: string,
     objectRefSize: number,
   ): { entry: ObjectTableEntry, bytesRead: number } {
-    const markerByte = Number(this.readInt(buffer, offset, 1, version));
+    const markerByte = Number(this.readInt(buffer, offset, 1, ReadIntMethod.unsigned));
     const markerParts = byteToMarker(markerByte, {} as any);
 
     assert(markerParts, `invalid marker byte ${markerByte}`);
@@ -65,12 +65,14 @@ export class ObjectTable extends BaseReader {
       }
     }
 
+    const dynamicIntMethod = version === '00' ? ReadIntMethod.v00 : ReadIntMethod.unsigned;
+
     let bytesRead = 1;
     let entry: ObjectTableEntry;
 
     switch (marker) {
       case Marker.int: {
-        const result = this.readDynamicInt(buffer, offset, version);
+        const result = this.readDynamicInt(buffer, offset, dynamicIntMethod);
         entry = result.entry;
         bytesRead += result.bytesRead - 1; // re-read first byte
         break;
@@ -84,9 +86,10 @@ export class ObjectTable extends BaseReader {
       }
 
       case Marker.date: {
+        // allegedly bytes is always 8, YET I've come across instances where it's
         const bytes = 2 ** lowerNibble;
         if (bytes !== 8) {
-          // throw new RangeError(`Unexpected date size not 8: ${bytes}`);
+          console.warn('Non-spec date; should be 8-bytes but is %d as lowerNibble is %s; that is fine though', bytes, lowerNibble.toString(16));
         }
         entry = this.readDate(buffer, offset + bytesRead, bytes);
         bytesRead += bytes;
@@ -96,7 +99,7 @@ export class ObjectTable extends BaseReader {
       case Marker.data: {
         let bytes = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           bytes = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -108,7 +111,7 @@ export class ObjectTable extends BaseReader {
       case Marker.ascii: {
         let bytes = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           bytes = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -120,7 +123,7 @@ export class ObjectTable extends BaseReader {
       case Marker.unicode: {
         let charCount = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           charCount = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -154,7 +157,7 @@ export class ObjectTable extends BaseReader {
       case Marker.set: {
         let size = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           size = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -169,7 +172,7 @@ export class ObjectTable extends BaseReader {
       case Marker.dict: {
         let size = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           size = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
