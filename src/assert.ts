@@ -2,13 +2,13 @@
 export class AssertError extends Error {
   readonly name = 'AssertError';
 
-  constructor(message: string, readonly assertion?: () => boolean) {
+  constructor(message: string, readonly assertion?: any) {
     super(message);
   }
 }
 
-export function assert(assertion: () => boolean, message: string) {
-  if (!assertion()) {
-    throw new AssertError(message, assertion);
+export function assert(assertion: any, message: string): asserts assertion {
+  if (!assertion) {
+    throw new AssertError(message);
   }
 }

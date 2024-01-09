@@ -27,6 +27,23 @@ export enum Marker {
   dict = 0b1101_0000, // 0xD0
 }
 
+export const v00Markers: ReadonlySet<Marker> = new Set([
+  Marker.null,
+  Marker.false,
+  Marker.true,
+  Marker.fill,
+  Marker.int,
+  Marker.real,
+  Marker.date,
+  Marker.data,
+  Marker.ascii,
+  Marker.unicode,
+  Marker.uid,
+  Marker.array,
+  Marker.set,
+  Marker.dict,
+]);
+
 export const markerPrimitives: ReadonlyMap<Marker, null | false | true | undefined> = new Map([
   [Marker.null, null],
   [Marker.false, false],
@@ -40,30 +57,26 @@ export type MarkerByteParts = {
 }
 
 export function byteToMarker(byte: number, pc: IParseContext): MarkerByteParts | null {
-  assert(() => ((byte | 0) & 0xFF) === byte, `byte arg is not an integral byte: ${byte}`);
+  assert(((byte | 0) & 0xFF) === byte, `byte arg is not an integral byte: ${byte}`);
 
   const upperNibbleMasked = byte & 0xF0;
   const lowerNibbleMasked = byte & 0x0F;
 
+  let marker: Marker;
   if (upperNibbleMasked === 0) {
-    if (Marker[byte] === undefined) {
-      console.warn('byte has zero upper-nibble but is unknown', { byte, pc });
-      return null;
-    }
-    return {
-      marker: byte,
-      lowerNibble: lowerNibbleMasked,
-    };
+    marker = byte;
+  } else {
+    marker = upperNibbleMasked;
   }
 
-  if (Marker[upperNibbleMasked] === undefined) {
-    console.warn('byte is has non-zero upper-nibble but is unknown', { byte, upperNibbleMasked, pc });
+  if (Marker[marker] === undefined) {
+    console.warn('byte upper nibble is unknown', { byte, upperNibbleMasked, pc });
     return null;
   }
 
   // `byte` is a complex type marker with some dynamic sizing
   return {
-    marker: upperNibbleMasked,
+    marker,
     lowerNibble: lowerNibbleMasked,
   }
 }
