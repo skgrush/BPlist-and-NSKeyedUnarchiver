@@ -61,9 +61,7 @@ export class Reader {
   }
 
   buildTopLevelObject() {
-    const topObjectElementIdx = Number(this.trailer.topObject);
-    // TODO: doesn't seem like the right way to do it...
-    const topOffset = [...this.offsetTable.keys()][topObjectElementIdx];
+    const topOffset = Number(this.trailer.topObject);
 
     return this._buildObjectsRecursive(topOffset, undefined);
   }
