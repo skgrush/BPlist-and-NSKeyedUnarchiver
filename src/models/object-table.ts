@@ -3,8 +3,9 @@ import { BaseReader, ReadIntMethod } from "../base-reader";
 import { bplistMagicNumber, versionByteLength } from "../constants/magic-number";
 import { Marker, byteToMarker, markerPrimitives } from "../markers";
 import { ObjectTableOffset } from "../types/bplist-index-aliases";
-import { ObjectTableArrayOrSet, ObjectTableEntry } from "./object-table-entries";
+import { ObjectTableArrayLike, ObjectTableEntry } from "./object-table-entries";
 import { Trailer } from "./trailer";
+import { Uuid } from "./uuid";
 
 export class ObjectTable extends BaseReader {
 
@@ -71,6 +72,13 @@ export class ObjectTable extends BaseReader {
     let entry: ObjectTableEntry;
 
     switch (marker) {
+      case Marker.uuid: {
+        const bytes = 16;
+        entry = new Uuid(this.readInt(buffer, offset + bytesRead, bytes, ReadIntMethod.unsigned));
+        bytesRead += bytes;
+        break;
+      }
+
       case Marker.int: {
         const result = this.readDynamicInt(buffer, offset, dynamicIntMethod);
         entry = result.entry;
@@ -139,21 +147,8 @@ export class ObjectTable extends BaseReader {
         break;
       }
 
-      case Marker.array: {
-        let size = lowerNibble;
-        if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
-          size = Number(byteCheck.entry);
-          bytesRead += byteCheck.bytesRead;
-        }
-        entry = new ObjectTableArrayOrSet(
-          'array',
-          this.readArrayObjRefs(buffer, offset + bytesRead, size, objectRefSize),
-        );
-        bytesRead += size * objectRefSize;
-        break;
-      }
-
+      case Marker.array:
+      case Marker.orderedSet:
       case Marker.set: {
         let size = lowerNibble;
         if (lowerNibble === 0xF) {
@@ -161,8 +156,8 @@ export class ObjectTable extends BaseReader {
           size = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
-        entry = new ObjectTableArrayOrSet(
-          'set',
+        entry = new ObjectTableArrayLike(
+          marker,
           this.readArrayObjRefs(buffer, offset + bytesRead, size, objectRefSize),
         );
         bytesRead += size * objectRefSize;

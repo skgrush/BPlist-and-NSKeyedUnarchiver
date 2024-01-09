@@ -5,6 +5,7 @@ export enum Marker {
   null = 0b0000_0000, // 0x00
   false = 0b0000_1000, // 0x08
   true = 0b0000_1001, // 0x09
+  uuid = 0b0000_1110, // 0x0E
   fill = 0b0000_1111, // 0x0F
   /** lower nibble is exponent of byte-size of the int */
   int = 0b0001_0000, // 0x10
@@ -21,6 +22,7 @@ export enum Marker {
   uid = 0b1000_0000, // 0x80
   /** lower nibble is count or 1111 for trailing int-based count, then objrefs */
   array = 0b1010_0000, // 0xA0
+  orderedSet = 0b1011_0000, // 0xB0
   /** lower nibble is count or 1111 for trailing int-based count, then objrefs */
   set = 0b1100_0000, // 0xC0
   /** lower nibble is count or 1111 for trailing int-based count, then keyrefs and objrefs */
@@ -40,7 +42,6 @@ export const v00Markers: ReadonlySet<Marker> = new Set([
   Marker.unicode,
   Marker.uid,
   Marker.array,
-  Marker.set,
   Marker.dict,
 ]);
 

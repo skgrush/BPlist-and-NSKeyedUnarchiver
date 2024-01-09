@@ -1,7 +1,8 @@
 import { BaseReader } from "./base-reader";
 import { bplistMagicNumber, versionByteLength } from "./constants/magic-number";
+import { Marker } from "./markers";
 import { ObjectTable } from "./models/object-table";
-import { ObjectTableArrayOrSet, ObjectTableDict, ObjectTableOutput } from "./models/object-table-entries";
+import { ObjectTableArrayLike, ObjectTableDict, ObjectTableOutput } from "./models/object-table-entries";
 import { OffsetTable } from "./models/offset-table";
 import { Trailer } from "./models/trailer";
 import { ObjRef } from "./types/bplist-index-aliases";
@@ -56,11 +57,11 @@ export class Reader extends BaseReader {
     }
 
     let output: ObjectTableOutput;
-    if (tableEntry instanceof ObjectTableArrayOrSet) {
+    if (tableEntry instanceof ObjectTableArrayLike) {
       const elements = tableEntry.objrefs.map(r => this._buildObjectsRecursive(r, workingSet)).filter(isNotUndefined);
 
       output =
-        tableEntry.type === 'array'
+        tableEntry.type === Marker.array
           ? Object.freeze(elements)
           : new Set(elements);
     }
