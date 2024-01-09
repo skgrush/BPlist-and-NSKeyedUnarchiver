@@ -2,29 +2,29 @@ import { assert } from "./assert";
 import { IParseContext } from "./parse-context";
 
 export enum Marker {
-  null = 0b0000_0000,
-  false = 0b0000_1000,
-  true = 0b0000_1001,
-  fill = 0b0000_1111,
+  null = 0b0000_0000, // 0x00
+  false = 0b0000_1000, // 0x08
+  true = 0b0000_1001, // 0x09
+  fill = 0b0000_1111, // 0x0F
   /** lower nibble is exponent of byte-size of the int */
-  int = 0b0001_0000,
+  int = 0b0001_0000, // 0x10
   /** lower nibble is exponent of byte-size of the real */
-  real = 0b0010_0000,
-  date = 0b0011_0011,
+  real = 0b0010_0000, // 0x20
+  date = 0b0011_0000, // 0x30
   /** lower nibble is byte-size or 1111 for trailing int-based size, then bytes */
-  data = 0b0100_0000,
+  data = 0b0100_0000, // 0x40
   /** lower nibble is byte-size or 1111 for trailing int-based size, then bytes */
-  ascii = 0b0101_0000,
+  ascii = 0b0101_0000, // 0x50
   /** lower nibble is "char count" (TODO:) or 1111 for trailing int-based size, then 2-byte chars??? */
-  unicode = 0b0110_0000,
+  unicode = 0b0110_0000, // 0x60
   /** lower nibble is byte-size minus 1 */
-  uid = 0b1000_0000,
+  uid = 0b1000_0000, // 0x80
   /** lower nibble is count or 1111 for trailing int-based count, then objrefs */
-  array = 0b1010_0000,
+  array = 0b1010_0000, // 0xA0
   /** lower nibble is count or 1111 for trailing int-based count, then objrefs */
-  set = 0b1100_0000,
+  set = 0b1100_0000, // 0xC0
   /** lower nibble is count or 1111 for trailing int-based count, then keyrefs and objrefs */
-  dict = 0b1101_0000,
+  dict = 0b1101_0000, // 0xD0
 }
 
 export const markerPrimitives: ReadonlyMap<Marker, null | false | true | undefined> = new Map([
@@ -50,14 +50,6 @@ export function byteToMarker(byte: number, pc: IParseContext): MarkerByteParts |
       console.warn('byte has zero upper-nibble but is unknown', { byte, pc });
       return null;
     }
-    return {
-      marker: byte,
-      lowerNibble: lowerNibbleMasked,
-    };
-  }
-
-  if (byte === Marker.date) {
-    // date is the only non-simple type with a fixed lower-nibble
     return {
       marker: byte,
       lowerNibble: lowerNibbleMasked,

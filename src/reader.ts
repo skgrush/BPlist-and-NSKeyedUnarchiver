@@ -15,7 +15,7 @@ class Uid {
 class ObjectTableArrayOrSet {
   constructor(
     readonly type: 'array' | 'set',
-    readonly objrefs: readonly OffsetTableOffset[],
+    readonly objrefs: readonly ObjRef[],
   ) { }
 }
 class ObjectTableDict {
@@ -24,10 +24,12 @@ class ObjectTableDict {
   ) { }
 }
 
+/** whole-file offset into the object table */
 type ObjectTableOffset = number & {};
-type OffsetTableOffset = number & {};
+/** index of the offset table */
+type ObjRef = number & {};
 
-type DictKeyValue = readonly [key: OffsetTableOffset, value: OffsetTableOffset];
+type DictKeyValue = readonly [key: ObjRef, value: ObjRef];
 type ObjectTableEntry = null | false | true | number | bigint | Date | Blob | string | Uid | ObjectTableDict | ObjectTableArrayOrSet;
 type ObjectTableOutput = null | boolean | number | bigint | Date | Blob | string | Uid | readonly ObjectTableOutput[] | ReadonlySet<ObjectTableOutput> | { readonly [k: string]: ObjectTableOutput };
 
@@ -41,7 +43,7 @@ export class Reader {
 
   readonly trailer: Trailer;
   /** maps object-reference offsets to full-file-offsets pointing to objects */
-  readonly offsetTable: ReadonlyMap<OffsetTableOffset, ObjectTableOffset>;
+  readonly offsetTable: readonly ObjectTableOffset[]; //ReadonlyMap<OffsetTableOffset, ObjectTableOffset>;
   readonly objectTable: ReadonlyMap<ObjectTableOffset, ObjectTableEntry>;
 
   constructor(buffer: ArrayBuffer) {
@@ -53,19 +55,20 @@ export class Reader {
 
     // this.buffer = buffer;
     this.trailer = Reader.getTrailer(buffer);
+    console.debug('Trailer found: %O', this.trailer);
     this.offsetTable = Reader.getOffsetTable(buffer, this.trailer);
     this.objectTable = Reader.getObjectTable(buffer, this.trailer, this.version);
   }
 
   buildTopLevelObject() {
-    const topObjectElementIdx = +this.trailer;
+    const topObjectElementIdx = Number(this.trailer.topObject);
     // TODO: doesn't seem like the right way to do it...
     const topOffset = [...this.offsetTable.keys()][topObjectElementIdx];
 
     return this._buildObjectsRecursive(topOffset, undefined);
   }
 
-  private _buildObjectsRecursive(offset: OffsetTableOffset, workingSet: undefined | Map<OffsetTableOffset, ObjectTableOutput>): undefined | ObjectTableOutput {
+  private _buildObjectsRecursive(offset: ObjRef, workingSet: undefined | Map<ObjRef, ObjectTableOutput>): undefined | ObjectTableOutput {
     workingSet ??= new Map();
 
     const existingOutput = workingSet.get(offset);
@@ -73,7 +76,7 @@ export class Reader {
       return existingOutput;
     }
 
-    const tableEntry = this.getObjectEntryByOffset(offset);
+    const tableEntry = this.getObjectEntryByObjRef(offset);
     if (tableEntry === undefined) {
       return undefined;
     }
@@ -115,16 +118,16 @@ export class Reader {
     return output;
   }
 
-  getObjectEntryByOffset(offset: OffsetTableOffset) {
-    const refFromOffset = this.offsetTable.get(offset);
+  getObjectEntryByObjRef(offset: ObjRef) {
+    const refFromOffset = this.offsetTable[offset];
     if (refFromOffset === undefined) {
       console.warn('Offset', offset, 'not found in offset table');
       return undefined;
     }
-    return this.getObjectEntryByObjectRef(refFromOffset);
+    return this.getObjectEntryByOffset(refFromOffset);
   }
 
-  getObjectEntryByObjectRef(ref: ObjectTableOffset) {
+  getObjectEntryByOffset(ref: ObjectTableOffset) {
     const entry = this.objectTable.get(ref);
     if (entry === undefined) {
       console.warn('ObjectRef', ref, 'not found in object table');
@@ -133,10 +136,10 @@ export class Reader {
     return entry;
   }
 
-  static getOffsetTable(buffer: ArrayBuffer, trailer: Trailer) {
+  static getOffsetTable(buffer: ArrayBuffer, trailer: Trailer): readonly ObjectTableOffset[] {
     const { offsetTableOffset, offsetIntSize } = trailer;
     const trailerOffset = trailer._trailerOffset;
-    const offsetTableByteSize = trailerOffset - +offsetTableOffset;
+    const offsetTableByteSize = trailerOffset - Number(offsetTableOffset);
     const offsetTableCount = offsetTableByteSize / offsetIntSize;
 
     assert(() => (offsetTableCount | 0) === offsetTableCount, `OffsetTable count must be an integer`);
@@ -148,21 +151,15 @@ export class Reader {
     const readerFn = getDeStructReaderBySize(offsetBitLength);
     const readerFns = Array(offsetTableCount).fill(readerFn) as Array<typeof readerFn>;
 
-    const offsetTableView = new DataView(buffer, +offsetTableOffset, offsetTableByteSize);
+    const offsetTableView = new DataView(buffer, Number(offsetTableOffset), offsetTableByteSize);
 
-    const map = new Map<OffsetTableOffset, ObjectTableOffset>();
-    let currentByteOffsetInTable = 0;
-    for (const offsetTableEntry of deStructWithIter(readerFns, offsetTableView)) {
-      map.set(currentByteOffsetInTable, offsetTableEntry);
-
-      currentByteOffsetInTable += offsetIntSize;
-    }
+    const map = deStructWith(readerFns, offsetTableView);
 
     return map;
   }
 
   static getObjectTable(buffer: ArrayBuffer, trailer: Trailer, version: string) {
-    const offsetTableOffset = +trailer.offsetTableOffset;
+    const offsetTableOffset = Number(trailer.offsetTableOffset);
     const objectRefSize = trailer.objectRefSize;
 
     const objectTableOffset = Reader.magicNumberLength + Reader.versionByteLength;
@@ -202,6 +199,7 @@ export class Reader {
       return undefined;
     }
     const { marker, lowerNibble } = markerParts;
+    console.debug('DBG: offset=%s found marker=%s with lowerNibble=0x%s', offset, Marker[marker], lowerNibble.toString(16))
 
     if (markerPrimitives.has(marker)) {
       return {
@@ -215,9 +213,9 @@ export class Reader {
 
     switch (marker) {
       case Marker.int: {
-        const bytes = 2 ** lowerNibble;
-        entry = this.readInt(buffer, offset + bytesRead, bytes, version);
-        bytesRead += bytes;
+        const result = this.readDynamicInt(buffer, offset, version);
+        entry = result.entry;
+        bytesRead += result.bytesRead - 1; // re-read first byte
         break;
       }
 
@@ -231,9 +229,9 @@ export class Reader {
       case Marker.date: {
         const bytes = 2 ** lowerNibble;
         if (bytes !== 8) {
-          throw new RangeError(`Unexpected date size not 8: ${bytes}`);
+          // throw new RangeError(`Unexpected date size not 8: ${bytes}`);
         }
-        entry = this.readDate(buffer, offset + bytesRead);
+        entry = this.readDate(buffer, offset + bytesRead, bytes);
         bytesRead += bytes;
         break;
       }
@@ -241,8 +239,9 @@ export class Reader {
       case Marker.data: {
         let bytes = lowerNibble;
         if (lowerNibble === 0xF) {
-          bytes = Number(this.readInt(buffer, offset + bytesRead, 8, version));
-          bytesRead += 8;
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          bytes = Number(byteCheck.entry);
+          bytesRead += byteCheck.bytesRead;
         }
         entry = this.readData(buffer, offset, bytes);
         bytesRead += bytes;
@@ -252,10 +251,11 @@ export class Reader {
       case Marker.ascii: {
         let bytes = lowerNibble;
         if (lowerNibble === 0xF) {
-          bytes = Number(this.readInt(buffer, offset + bytesRead, 8, version));
-          bytesRead += 8;
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          bytes = Number(byteCheck.entry);
+          bytesRead += byteCheck.bytesRead;
         }
-        entry = this.readAscii(buffer, offset, bytes);
+        entry = this.readAscii(buffer, offset + bytesRead, bytes);
         bytesRead += bytes;
         break;
       }
@@ -263,8 +263,9 @@ export class Reader {
       case Marker.unicode: {
         let charCount = lowerNibble;
         if (lowerNibble === 0xF) {
-          charCount = Number(this.readInt(buffer, offset + bytesRead, 8, version));
-          bytesRead += 8;
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          charCount = Number(byteCheck.entry);
+          bytesRead += byteCheck.bytesRead;
         }
         entry = this.readUnicode16(buffer, offset + bytesRead, charCount);
         bytesRead += charCount * 2;
@@ -281,8 +282,9 @@ export class Reader {
       case Marker.array: {
         let size = lowerNibble;
         if (lowerNibble === 0xF) {
-          size = Number(this.readInt(buffer, offset + bytesRead, 8, version));
-          bytesRead += 8;
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          size = Number(byteCheck.entry);
+          bytesRead += byteCheck.bytesRead;
         }
         entry = new ObjectTableArrayOrSet(
           'array',
@@ -295,8 +297,9 @@ export class Reader {
       case Marker.set: {
         let size = lowerNibble;
         if (lowerNibble === 0xF) {
-          size = Number(this.readInt(buffer, offset + bytesRead, 8, version));
-          bytesRead += 8;
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          size = Number(byteCheck.entry);
+          bytesRead += byteCheck.bytesRead;
         }
         entry = new ObjectTableArrayOrSet(
           'set',
@@ -309,8 +312,9 @@ export class Reader {
       case Marker.dict: {
         let size = lowerNibble;
         if (lowerNibble === 0xF) {
-          size = Number(this.readInt(buffer, offset + bytesRead, 8, version));
-          bytesRead += 8;
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, version);
+          size = Number(byteCheck.entry);
+          bytesRead += byteCheck.bytesRead;
         }
         entry = this.readDictObjRefs(buffer, offset + bytesRead, size, objectRefSize);
         bytesRead += size * objectRefSize * 2;
@@ -321,6 +325,8 @@ export class Reader {
         throw new Error(); // should be covered in byteToMarker
     }
 
+    console.debug('DBG: offset=%d done, read %d bytes and found %O', offset, bytesRead, entry);
+
     return {
       entry,
       bytesRead,
@@ -330,8 +336,8 @@ export class Reader {
   static getTrailer(buffer: ArrayBuffer) {
     const trailerByteLength = 32;
     const unusedLeadingBytes = 5;
-    const trailerOffset = buffer.byteLength - trailerByteLength + unusedLeadingBytes;
-    const trailerView = new DataView(buffer, trailerOffset);
+    const trailerOffset = buffer.byteLength - trailerByteLength;
+    const trailerView = new DataView(buffer, trailerOffset + unusedLeadingBytes);
 
     const [sortVersion, offsetIntSize, objectRefSize, numObjects, topObject, offsetTableOffset] = deStruct([8, 8, 8, 64, 64, 64], trailerView);
     return new Trailer(
@@ -343,6 +349,20 @@ export class Reader {
       offsetTableOffset,
       trailerOffset,
     );
+  }
+
+  static readDynamicInt(buffer: ArrayBuffer, offset: number, version: string) {
+    const markerByte = Number(this.readInt(buffer, offset, 1, version));
+    const markerParts = byteToMarker(markerByte, {} as any);
+    if (markerParts?.marker !== Marker.int) {
+      throw new Error(`dynamic int was not an int, was ${markerParts?.marker}`);
+    }
+    const bytes = 2 ** markerParts.lowerNibble;
+    const entry = this.readInt(buffer, offset + 1, bytes, version);
+    return {
+      entry,
+      bytesRead: bytes + 1
+    };
   }
 
   /**
@@ -357,12 +377,12 @@ export class Reader {
       throw new RangeError(`Unexpected byte length for int: ${bytes}`);
     }
 
-    if (version === '00' && (bits === 8 || bits === 16)) {
+    if (version === '00' && (bits == 64 || bits === 128)) {
       bits = -bits as AcceptedBitLength;
     }
 
     const reader = getDeStructReaderBySize(bits);
-    return BigInt(reader(view, offset).value);
+    return BigInt(reader(view, 0).value);
   }
 
   static readReal(buffer: ArrayBuffer, offset: number, bytes: number) {
@@ -377,8 +397,8 @@ export class Reader {
     throw new RangeError(`Unexpected byte length for real: ${bytes}`);
   }
 
-  static readDate(buffer: ArrayBuffer, offset: number) {
-    const secondsSinceEpoch = this.readReal(buffer, offset, 8);
+  static readDate(buffer: ArrayBuffer, offset: number, bytes: number) {
+    const secondsSinceEpoch = this.readReal(buffer, offset, bytes);
 
     const utcMilliseconds = cfAbsoluteTimeEpochMilliseconds + secondsSinceEpoch * 1e3;
     return new Date(utcMilliseconds);
@@ -453,8 +473,8 @@ export class Reader {
 
     return new ObjectTableDict([
       ...(function* () {
-        for (let i = 0; i < count; i += 2) {
-          yield [keysAndObjs[i], keysAndObjs[i + 1]] as const;
+        for (let i = 0; i < count; ++i) {
+          yield [keysAndObjs[i], keysAndObjs[i + count]] as const;
         }
       })()
     ]);
