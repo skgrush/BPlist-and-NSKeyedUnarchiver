@@ -15,8 +15,6 @@
     "bplist",
     "NSKeyedUnarchiver"
   ],
-  "type": "module",
-  "dependencies": {},
   "devDependencies": {
     "@types/node": "^20.10.7",
     "rimraf": "^5.0.5",

@@ -13,3 +13,22 @@ APSL v2 in [OriginalCode.APSL.LICENSE](./OriginalCode.APSL.LICENSE).
 **However**, as this code does not use any of the original C code, original
 or modified, I feel mildly comfortable in licensing this project as MIT, as
 long as the source-publishing criteria are met.
+
+
+## Usage
+
+### Node
+
+```ts
+const { Reader } = require('bplist-and-nskeyedunarchiver/reader');
+
+const nodeBuffer = readFileSync(filePath);
+const arrayBuffer = nodeBuffer.buffer.slice(
+  nodeBuffer.byteoffset,
+  nodeBuffer.byteOffset + nodeBuffer.byteLength,
+);
+
+const reader = new Reader(arrayBuffer);
+
+const object = reader.buildTopLevelObject();
+```
