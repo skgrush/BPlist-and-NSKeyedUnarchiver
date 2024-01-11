@@ -19,5 +19,5 @@ export class ObjectTableDict {
   ) { }
 }
 
-export type ObjectTableEntry = null | false | true | number | bigint | Date | Blob | string | Uid | ObjectTableDict | ObjectTableArrayLike;
-export type ObjectTableOutput = null | boolean | number | bigint | Date | Blob | string | Uid | readonly ObjectTableOutput[] | ReadonlySet<ObjectTableOutput> | { readonly [k: string]: ObjectTableOutput };
+export type ObjectTableEntry = null | false | true | number | bigint | Date | ArrayBuffer | string | Uid | ObjectTableDict | ObjectTableArrayLike;
+export type ObjectTableOutput = null | boolean | number | bigint | Date | ArrayBuffer | string | Uid | readonly ObjectTableOutput[] | ReadonlySet<ObjectTableOutput> | { readonly [k: string]: ObjectTableOutput };

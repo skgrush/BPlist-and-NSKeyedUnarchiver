@@ -15,7 +15,7 @@ export type IArchivedInstance = { readonly $class: Uid, $classname: never, reado
 export type IArchivedClass = { readonly $classname: ClassName, $classes: readonly ClassName[] }
 export type IArchivedObject =
   | string
-  | Blob
+  | ArrayBuffer
   | IArchivedInstance
   | IArchivedClass
   ;
@@ -105,9 +105,9 @@ export abstract class Coder<TClass> {
     throw new DecodeMismatch(forKey, 'boolean', typeof value);
   }
 
-  decodeBytes(forKey: string): Blob | null {
+  decodeBytes(forKey: string): ArrayBuffer | null {
     const value = this.getRawValueFromDataOrUid(forKey);
-    if (value === undefined || value === null || value instanceof Blob) {
+    if (value === undefined || value === null || value instanceof ArrayBuffer) {
       return value ?? null;
     }
     throw new DecodeMismatch(forKey, 'Blob', value);
@@ -176,21 +176,7 @@ export abstract class Coder<TClass> {
     return coder.decode() as (TCoder extends CoderType<infer R> ? R : never);
   }
 
-  private _getInstanceByUid(uid: Uid, forKey: string) {
-    const instance = this.$objects.getByUid(uid);
-
-    // special cases first
-    if (typeof instance === 'string' || instance instanceof Blob || instance === null) {
-      return { instance, isSpecial: true as const };
-    }
-
-    if (!('$class' in instance)) {
-      throw new DecodeMismatch(forKey ?? `Uid<${uid}>`, 'object with $class', instance);
-    }
-    return { instance, isSpecial: false as const };
-  }
-
-  private _decodeKnownObject(uid: Uid, forKey: string) {
+  protected _decodeKnownObject(uid: Uid, forKey: string) {
     const { instance, isSpecial } = this._getInstanceByUid(uid, forKey);
     if (isSpecial) {
       return instance;
@@ -209,6 +195,20 @@ export abstract class Coder<TClass> {
     }
 
     return this.decodeObjectOf(coderType, forKey);
+  }
+
+  private _getInstanceByUid(uid: Uid, forKey: string) {
+    const instance = this.$objects.getByUid(uid);
+
+    // special cases first
+    if (typeof instance === 'string' || instance instanceof ArrayBuffer || instance === null) {
+      return { instance, isSpecial: true as const };
+    }
+
+    if (!('$class' in instance)) {
+      throw new DecodeMismatch(forKey ?? `Uid<${uid}>`, 'object with $class', instance);
+    }
+    return { instance, isSpecial: false as const };
   }
 }
 

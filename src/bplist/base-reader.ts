@@ -75,7 +75,7 @@ export class BaseReader {
   }
 
   static readData(buffer: ArrayBuffer, offset: number, size: number) {
-    return new Blob([buffer.slice(offset, offset + size)]);
+    return buffer.slice(offset, offset + size);
   }
 
   /**
