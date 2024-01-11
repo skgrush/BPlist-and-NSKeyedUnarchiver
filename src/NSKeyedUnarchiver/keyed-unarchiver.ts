@@ -5,6 +5,7 @@ import { Uid, ObjectTableOutput } from "@skgrush/bplist-and-nskeyedunarchiver/bp
 export interface CoderType<T> extends Function {
   new(...args: any[]): Coder<T>;
 
+  readonly $classname: string;
   initForReadingDataFrom($objects: $ObjectsMap, data: IArchivedInstance): Coder<T>;
 }
 
@@ -61,7 +62,6 @@ export type IArchivedPList = {
 
 export abstract class Coder<TClass> {
 
-  abstract readonly $classname: string;
   abstract readonly $objects: $ObjectsMap;
   abstract readonly data: IArchivedInstance;
 
@@ -71,7 +71,7 @@ export abstract class Coder<TClass> {
 
   abstract decode(): TClass;
 
-  setClass(coderClass: CoderType<any>, forClassName: string) {
+  setClass(coderClass: CoderType<any>, forClassName = coderClass.$classname) {
     const existing = this._classNameCoders.get(forClassName);
     if (existing && existing !== coderClass) {
       throw new Error(`Coder for class name ${forClassName} already exists`);
@@ -191,7 +191,7 @@ export abstract class Coder<TClass> {
     const coderType = this._classNameCoders.get(cls.$classname);
     // TODO: should we use the `cls.$classes`
     if (!coderType) {
-      throw new MissingDecoder(cls.$classname, this.$classname);
+      throw new MissingDecoder(cls.$classname, (this.constructor as CoderType<TClass>).$classname);
     }
 
     return this.decodeObjectOf(coderType, forKey);
