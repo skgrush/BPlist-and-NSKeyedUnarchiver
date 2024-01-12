@@ -11,8 +11,9 @@
     "baseUrl": "./",
     "incremental": false,
     "paths": {
-      "dist/*": [
-        "dist/*"
+      "@skgrush/bplist-and-nskeyedunarchiver/bplist": [
+        "./src/bplist/index.ts",
+        "./dist-sec/cjs/bplist/index.js"
       ]
     }
   },

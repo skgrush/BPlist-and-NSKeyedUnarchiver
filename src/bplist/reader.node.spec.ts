@@ -7,7 +7,7 @@ if (require.main === module) {
   main();
 }
 
-function main() {
+export function main() {
   const arg = process.argv[2];
 
   if (!arg) {
@@ -30,4 +30,6 @@ function main() {
 
   console.info('================ RESULT ================');
   console.info(result);
+
+  return result;
 }
