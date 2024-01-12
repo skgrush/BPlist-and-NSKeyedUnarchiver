@@ -1,13 +1,14 @@
 // import { cfAbsoluteTimeEpochMilliseconds } from "@skgrush/bplist-and-nskeyedunarchiver/bplist";
 import { cfAbsoluteTimeEpochMilliseconds } from '../../bplist';
-import { $ObjectsMap, KeyedUnarchiver, IArchivedInstance } from "../keyed-unarchiver";
+import { KeyedUnarchiver } from "../keyed-unarchiver";
+import { $ObjectsMap } from "../$objects-map";
+import { IArchivedInstance } from '../types/archive-types';
 
 export class NSDateCoder extends KeyedUnarchiver<Date> {
   static readonly $classname = 'NSDate';
 
   constructor(readonly $objects: $ObjectsMap, readonly data: IArchivedInstance) {
     super();
-
   }
 
   static initForReadingDataFrom($objects: $ObjectsMap, data: IArchivedInstance) {

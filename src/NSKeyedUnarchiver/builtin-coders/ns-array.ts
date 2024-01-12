@@ -1,6 +1,8 @@
 // import { Uid } from "@skgrush/bplist-and-nskeyedunarchiver/bplist";
 import { Uid } from '../../bplist';
-import { $ObjectsMap, KeyedUnarchiver, IArchivedInstance } from "../keyed-unarchiver";
+import { KeyedUnarchiver } from "../keyed-unarchiver";
+import { $ObjectsMap } from "../$objects-map";
+import { IArchivedInstance } from '../types/archive-types';
 
 
 export class NSArrayCoder extends KeyedUnarchiver<Array<unknown>> {
