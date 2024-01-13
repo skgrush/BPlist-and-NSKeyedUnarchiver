@@ -1,8 +1,6 @@
 # See http://help.github.com/ignore-files/ for more about ignoring files.
 
-test.d.ts
-test.js
-/dist-spec
+/dist*/
 
 # Compiled output
 /dist
@@ -12,6 +10,7 @@ test.js
 
 # Node
 /node_modules
+/*/node_modules
 npm-debug.log
 yarn-error.log
 
