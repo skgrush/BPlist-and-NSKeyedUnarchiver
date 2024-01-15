@@ -1,4 +1,4 @@
-import { Uid } from "../bplist";
+import { Uid } from "@skgrush/bplist-and-nskeyedunarchiver/bplist";
 import { IArchivedObject } from "./types/archive-types";
 
 export class $ObjectsMap {

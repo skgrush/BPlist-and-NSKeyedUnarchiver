@@ -1,5 +1,4 @@
-// import { Uid, ObjectTableOutput } from "@skgrush/bplist-and-nskeyedunarchiver/bplist";
-import { Uid } from "../bplist";
+import { Uid } from "@skgrush/bplist-and-nskeyedunarchiver/bplist";
 import { $ObjectsMap } from "./$objects-map";
 import { DecodeMismatch } from "./errors/decode-mismatch";
 import { MissingDecoder } from "./errors/missing-decoder";
