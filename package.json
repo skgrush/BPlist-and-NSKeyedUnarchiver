@@ -15,13 +15,31 @@
     "bplist",
     "NSKeyedUnarchiver"
   ],
+  "exports": {
+    "./bplist": {
+      "types": "./bplist/index.d.mts",
+      "esm": "./bplist/index.mjs",
+      "esm2022": "./bplist/index.mjs",
+      "import": "./bplist/index.mjs",
+      "require": "./bplist/index.js"
+    },
+    "./NSKeyedUnarchiver": {
+      "types": "./NSKeyedUnarchiver/index.d.mts",
+      "esm": "./NSKeyedUnarchiver/index.js",
+      "esm2022": "./NSKeyedUnarchiver/index.js",
+      "import": "./NSKeyedUnarchiver/index.mjs",
+      "require": "./NSKeyedUnarchiver/index.js"
+    }
+  },
   "devDependencies": {
     "@types/node": "^20.10.7",
     "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
     "typescript": "^5.3.3"
   },
   "scripts": {
-    "build": "rimraf dist && tsc",
+    "build": "rimraf dist && tsup-node && cp LICENSE package.json README.md ./dist",
+    "pack": "cd dist && npm pack .",
     "clean": "rimraf dist dist-spec",
     "build:test": "rimraf dist-spec && tsc -p ./tsconfig.spec.json"
   }
