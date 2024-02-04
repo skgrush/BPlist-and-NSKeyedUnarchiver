@@ -1,5 +1,4 @@
-// import { Uuid, deStruct } from "@skgrush/bplist-and-nskeyedunarchiver/bplist";
-import { Uuid, deStruct } from '../../bplist';
+import { Uuid, deStruct } from '@skgrush/bplist-and-nskeyedunarchiver/bplist';
 import { KeyedUnarchiver } from "../keyed-unarchiver";
 import { $ObjectsMap } from "../$objects-map";
 import { IArchivedInstance } from '../types/archive-types';

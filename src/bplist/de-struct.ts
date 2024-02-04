@@ -37,17 +37,17 @@ export function deStructWith<const Fns extends ReaderArray>(
   return result;
 }
 
-export function* deStructWithIter<const Fns extends ReaderArray>(
+export function* deStructWithIter<const Fns extends Iterable<DeStructWithReader>>(
   fns: Fns,
   view: DataView,
 ) {
   let currentByteOffset = 0;
-  let currentCount = 0;
 
-  type R = DeStructWithResult<Fns> extends number[] ? number : DeStructWithResult<Fns> extends bigint[] ? bigint : (bigint | number);
+  type DeStructorType = Fns extends Iterable<infer R> ? R : never;
+  type R = ReturnType<DeStructorType>['value'];
 
-  for (; currentCount < fns.length; ++currentCount) {
-    const { value, bytesRead } = fns[currentCount](view, currentByteOffset);
+  for (const fn of fns) {
+    const { value, bytesRead } = fn(view, currentByteOffset);
     yield value as R;
     currentByteOffset += bytesRead;
   }

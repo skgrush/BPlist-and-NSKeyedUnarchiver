@@ -1,5 +1,5 @@
-import { Uid } from "../bplist";
-import { IArchivedObject } from "./types/archive-types";
+import { Uid } from '@skgrush/bplist-and-nskeyedunarchiver/bplist';
+import { IArchivedObject } from "./archive-types";
 
 /**
  * The expected structure of a decoded bplist made by NSKeyedArchiver.
