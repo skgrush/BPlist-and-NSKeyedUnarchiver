@@ -111,7 +111,7 @@ export class ObjectTable extends BaseReader {
           bytes = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
-        entry = this.readData(buffer, offset, bytes);
+        entry = this.readData(buffer, offset + bytesRead, bytes);
         bytesRead += bytes;
         break;
       }
