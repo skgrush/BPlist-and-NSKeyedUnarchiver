@@ -17,18 +17,112 @@ long as the source-publishing criteria are met.
 
 ## Usage
 
-### Node
+### BPlist
+
+These examples show reading a file (in Node and in the Browser)
+and parsing the top-level BPlist object from it.
+
+#### Node
 
 ```ts
-const { Reader } = require('bplist-and-nskeyedunarchiver/reader');
+const { readFile } = require('node:fs/promises'); 
+const { Reader } = require('@skgrush/bplist-and-nskeyedunarchiver/bplist/reader');
 
-const nodeBuffer = readFileSync(filePath);
-const arrayBuffer = nodeBuffer.buffer.slice(
-  nodeBuffer.byteoffset,
-  nodeBuffer.byteOffset + nodeBuffer.byteLength,
-);
+async function readBPlistFromFilePath(filePath: string) {
+    const nodeBuffer = await readFile(filePath);
+    const arrayBuffer = nodeBuffer.buffer.slice(
+        nodeBuffer.byteoffset,
+        nodeBuffer.byteOffset + nodeBuffer.byteLength,
+    );
 
-const reader = new Reader(arrayBuffer);
+    const reader = new Reader(arrayBuffer);
 
-const object = reader.buildTopLevelObject();
+    const object = reader.buildTopLevelObject();
+}
+```
+
+#### Browser
+
+```ts
+import { Reader } from '@skgrush/bplist-and-nskeyedunarchiver/bplist/reader';
+
+async function readBPlistFromBlob(blob: Blob) {
+    const arrayBuffer = await blob.arrayBuffer();
+
+    const reader = new Reader(arrayBuffer);
+
+    return reader.buildTopLevelObject();
+}
+```
+
+### NSKeyedUnarchiver
+
+This example provides examples of how to unarchive a custom class containing some native NS types,
+including arrays of other custom class.
+
+```ts
+import { Reader } from '@skgrush/bplist-and-nskeyedunarchiver/bplist/reader';
+import { $ObjectsMap, IArchivedInstance, KeyedUnarchiver, NSArrayCoder, NSDateCoder, NSUUIDCoder } from '@skgrush/bplist-and-nskeyedunarchiver/NSKeyedUnarchiver';
+
+
+async function readMyClassFromBlob(blob: Blob) {
+    // see BPlist example above
+    const bplistObject = await readBPlistFromBlob(blob);
+    
+    // top level objects can be any type, so you may want to filter out any of the possible types
+    if (!bplistObject || typeof bplistObject !== 'object' || !('$archiver' in bplistObject)) {
+        throw new Error('Invalid BPList object file');
+    }
+    
+    return MyDecoder.unarchiveObject(MyDecoder, bplistObject);
+}
+
+
+class MyDecoder extends KeyedUnarchiver<MyClass> {
+    static readonly $classname = 'MyNamespace.MyClassname';
+
+    constructor(
+        readonly $objects: $ObjectsMap,
+        readonly data: IArchivedInstance,
+    ) {
+        super();
+    }
+
+    static initForReadingDataFrom($objects: $ObjectsMap, data: IArchivedInstance) {
+        return new MyDecoder($objects, data);
+    }
+    
+    decode(): MyClass {
+
+        // decode the properties of your class
+        const myTimestamp = this.decodeObjectOf(NSDateCoder, 'myTimestamp', true);
+        const myName = this.decodeString('myName', true);
+        const arry = this.decodeObjectOf([NSArrayCoder, SomeOtherDecoder], 'arrayOfSomething', true) as SomeOtherClass[];
+        
+        return new MyClass(myTimestamp, myName, arry);
+    }
+}
+
+class SomeOtherDecoder extends KeyedUnarchiver<SomeOtherClass> {
+    static readonly $classname = 'MyNamespace.SomeOtherClass';
+
+    constructor(
+        readonly $objects: $ObjectsMap,
+        readonly data: IArchivedInstance,
+    ) {
+        super();
+    }
+
+    static initForReadingDataFrom($objects: $ObjectsMap, data: IArchivedInstance) {
+        return new SomeOtherDecoder($objects, data);
+    }
+
+    decode(): SomeOtherClass {
+        const myUuid = this.decodeObjectOf(NSUuidCoder, 'myUuid', true);
+        const myFloat = this.decodeFloat('myFloat');
+        
+        return new SomeOtherClass(myUuid);
+    }
+    
+}
 ```
