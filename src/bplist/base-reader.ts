@@ -13,14 +13,16 @@ export enum ReadIntMethod {
 
 export class BaseReader {
 
+  constructor(protected readonly logger: ILogger) { }
+
   /**
    * First byte must be a {@link Marker.int} which determines the rest of size of the int.
    * Reads the marker byte and the rest of the int, returns the int, and the total number of bytes read.
    */
-  static readDynamicInt(buffer: ArrayBuffer, offset: number, method: ReadIntMethod, logger: ILogger) {
+  readDynamicInt(buffer: ArrayBuffer, offset: number, method: ReadIntMethod) {
     const markerByte = Number(this.readInt(buffer, offset, 1, ReadIntMethod.unsigned));
 
-    const markerParts = byteToMarker(markerByte, {} as any, logger);
+    const markerParts = byteToMarker(markerByte, {} as any, this.logger);
     if (markerParts?.marker !== Marker.int) {
       throw new Error(`dynamic int was not an int, was ${markerParts?.marker}`);
     }
@@ -36,7 +38,7 @@ export class BaseReader {
    * According to the comments in CFBinaryPList.c, in version='00', ints of size
    * 1|2|4 are always unsigned while ints of size 8|16 are always signed.
    */
-  static readInt(buffer: ArrayBuffer, offset: number, bytes: number, method: ReadIntMethod) {
+  readInt(buffer: ArrayBuffer, offset: number, bytes: number, method: ReadIntMethod) {
     const view = new DataView(buffer, offset, bytes);
     let bits = bytes * 8 as AcceptedBitLength;
 
@@ -56,7 +58,7 @@ export class BaseReader {
     return BigInt(reader(view, 0).value);
   }
 
-  static readReal(buffer: ArrayBuffer, offset: number, bytes: number) {
+  readReal(buffer: ArrayBuffer, offset: number, bytes: number) {
     const view = new DataView(buffer, offset, bytes);
     switch (bytes) {
       case 4:
@@ -68,27 +70,27 @@ export class BaseReader {
     throw new RangeError(`Unexpected byte length for real: ${bytes}`);
   }
 
-  static readDate(buffer: ArrayBuffer, offset: number, bytes: number) {
+  readDate(buffer: ArrayBuffer, offset: number, bytes: number) {
     const secondsSinceEpoch = this.readReal(buffer, offset, bytes);
 
     const utcMilliseconds = cfAbsoluteTimeEpochMilliseconds + secondsSinceEpoch * 1e3;
     return new Date(utcMilliseconds);
   }
 
-  static readData(buffer: ArrayBuffer, offset: number, size: number) {
+  readData(buffer: ArrayBuffer, offset: number, size: number) {
     return buffer.slice(offset, offset + size);
   }
 
   /**
    * TODO: are we 100% sure that 8-bit ASCII is the correct encoding?
    */
-  static readAscii(buffer: ArrayBuffer, offset: number, bytes: number) {
+  readAscii(buffer: ArrayBuffer, offset: number, bytes: number) {
     const byteArray = new Uint8Array(buffer, offset, bytes);
 
     return String.fromCharCode.apply(null, byteArray as any);
   }
 
-  static readUnicode16(buffer: ArrayBuffer, offset: number, count: number) {
+  readUnicode16(buffer: ArrayBuffer, offset: number, count: number) {
     // damn you little-endian; if Uint16Array were bigendian we could just read that
     const byteLength = count * 2;
     const dataView = new DataView(buffer, offset, byteLength);
@@ -102,7 +104,7 @@ export class BaseReader {
     ]);
   }
 
-  static readUid(buffer: ArrayBuffer, offset: number, bytes: number) {
+  readUid(buffer: ArrayBuffer, offset: number, bytes: number) {
     const bits = bytes * 8;
     if (bits !== 8 && bits !== 16 && bits !== 32 && bits !== 64) {
       throw new RangeError(`Unexpected byte length for UID: ${bytes}`);
@@ -112,7 +114,7 @@ export class BaseReader {
     return new Uid(BigInt(getDeStructReaderBySize(bits)(dataView, 0).value));
   }
 
-  static readArrayObjRefs(buffer: ArrayBuffer, offset: number, count: number, objectRefSize: number) {
+  readArrayObjRefs(buffer: ArrayBuffer, offset: number, count: number, objectRefSize: number) {
     // damn you little-endian; if UintXXArray were bigendian we could just read that
     const byteLength = count * objectRefSize;
     const dataView = new DataView(buffer, offset, byteLength);
@@ -128,7 +130,7 @@ export class BaseReader {
     return deStructWith(fnArray, dataView);
   }
 
-  static readDictObjRefs(buffer: ArrayBuffer, offset: number, count: number, objectRefSize: number): ObjectTableDict {
+  readDictObjRefs(buffer: ArrayBuffer, offset: number, count: number, objectRefSize: number): ObjectTableDict {
     const byteLength = count * objectRefSize * 2;
     const dataView = new DataView(buffer, offset, byteLength);
 

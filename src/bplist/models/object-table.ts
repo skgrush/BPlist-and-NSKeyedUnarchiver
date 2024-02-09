@@ -15,7 +15,7 @@ export class ObjectTable extends BaseReader {
   private readonly _table = new Map<ObjectTableOffset, ObjectTableEntry>();
 
   constructor(buffer: ArrayBuffer, trailer: Trailer, version: string, logger: ILogger) {
-    super();
+    super(logger);
 
     const offsetTableOffset = Number(trailer.offsetTableOffset);
     const objectRefSize = trailer.objectRefSize;
@@ -25,7 +25,7 @@ export class ObjectTable extends BaseReader {
 
     this._table = new Map();
     while (currentOffset < offsetTableOffset) {
-      const result = ObjectTable.parseObjectTableEntry(buffer, currentOffset, version, objectRefSize, logger);
+      const result = this.parseObjectTableEntry(buffer, currentOffset, version, objectRefSize);
       if (!result) {
         currentOffset++;
         continue;
@@ -37,7 +37,7 @@ export class ObjectTable extends BaseReader {
     }
 
     if (currentOffset !== offsetTableOffset) {
-      logger.warn('End of object table should be equal to offsetTableOffset', { currentOffset, offsetTableOffset });
+      this.logger.warn('End of object table should be equal to offsetTableOffset', { currentOffset, offsetTableOffset });
     }
   }
 
@@ -47,19 +47,18 @@ export class ObjectTable extends BaseReader {
     return result;
   }
 
-  static parseObjectTableEntry(
+  parseObjectTableEntry(
     buffer: ArrayBuffer,
     offset: number,
     version: string,
     objectRefSize: number,
-    logger: ILogger,
   ): { entry: ObjectTableEntry, bytesRead: number } {
     const markerByte = Number(this.readInt(buffer, offset, 1, ReadIntMethod.unsigned));
-    const markerParts = byteToMarker(markerByte, {} as any, logger);
+    const markerParts = byteToMarker(markerByte, {} as any, this.logger);
 
     assert(markerParts, `invalid marker byte ${markerByte}`);
     const { marker, lowerNibble } = markerParts;
-    logger.debug('DBG: offset=%s found marker=%s with lowerNibble=0x%s', offset, Marker[marker], lowerNibble.toString(16))
+    this.logger.debug('DBG: offset=%s found marker=%s with lowerNibble=0x%s', offset, Marker[marker], lowerNibble.toString(16))
 
     if (markerPrimitives.has(marker)) {
       return {
@@ -82,7 +81,7 @@ export class ObjectTable extends BaseReader {
       }
 
       case Marker.int: {
-        const result = this.readDynamicInt(buffer, offset, dynamicIntMethod, logger);
+        const result = this.readDynamicInt(buffer, offset, dynamicIntMethod);
         entry = result.entry;
         bytesRead += result.bytesRead - 1; // re-read first byte
         break;
@@ -99,7 +98,7 @@ export class ObjectTable extends BaseReader {
         // allegedly bytes is always 8, YET I've come across instances where it's
         const bytes = 2 ** lowerNibble;
         if (bytes !== 8) {
-          logger.warn('Non-spec date; should be 8-bytes but is %d as lowerNibble is %s; that is fine though', bytes, lowerNibble.toString(16));
+          this.logger.warn('Non-spec date; should be 8-bytes but is %d as lowerNibble is %s; that is fine though', bytes, lowerNibble.toString(16));
         }
         entry = this.readDate(buffer, offset + bytesRead, bytes);
         bytesRead += bytes;
@@ -109,7 +108,7 @@ export class ObjectTable extends BaseReader {
       case Marker.data: {
         let bytes = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod, logger);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           bytes = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -121,7 +120,7 @@ export class ObjectTable extends BaseReader {
       case Marker.ascii: {
         let bytes = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod, logger);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           bytes = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -133,7 +132,7 @@ export class ObjectTable extends BaseReader {
       case Marker.unicode: {
         let charCount = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod, logger);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           charCount = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -154,7 +153,7 @@ export class ObjectTable extends BaseReader {
       case Marker.set: {
         let size = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod, logger);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           size = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -169,7 +168,7 @@ export class ObjectTable extends BaseReader {
       case Marker.dict: {
         let size = lowerNibble;
         if (lowerNibble === 0xF) {
-          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod, logger);
+          const byteCheck = this.readDynamicInt(buffer, offset + bytesRead, dynamicIntMethod);
           size = Number(byteCheck.entry);
           bytesRead += byteCheck.bytesRead;
         }
@@ -182,7 +181,7 @@ export class ObjectTable extends BaseReader {
         throw new Error(); // should be covered in byteToMarker
     }
 
-    logger.debug('DBG: offset=%d done, read %d bytes and found %O', offset, bytesRead, entry);
+    this.logger.debug('DBG: offset=%d done, read %d bytes and found %O', offset, bytesRead, entry);
 
     return {
       entry,

@@ -24,15 +24,15 @@ export class Reader extends BaseReader {
   readonly logger: ILogger;
 
   constructor(buffer: ArrayBuffer, logger: ILogger) {
-    super();
+    super(logger);
 
     this.logger = logger;
 
-    const magicNumber = Reader.readAscii(buffer, 0, bplistMagicNumber.length);
+    const magicNumber = this.readAscii(buffer, 0, bplistMagicNumber.length);
     if (magicNumber !== bplistMagicNumber) {
       throw new Error(`Invalid magicNumber (at start of file); must be ${bplistMagicNumber} but got ${JSON.stringify(magicNumber)}`);
     }
-    this.version = Reader.readAscii(buffer, bplistMagicNumber.length, versionByteLength);
+    this.version = this.readAscii(buffer, bplistMagicNumber.length, versionByteLength);
     if (this.version !== '00') {
       logger.warn('WARN: version is not 00 and will likely have issues / fail! version = %s', this.version);
     }
