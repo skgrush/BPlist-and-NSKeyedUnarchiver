@@ -26,18 +26,20 @@ and parsing the top-level BPlist object from it.
 
 ```ts
 const { readFile } = require('node:fs/promises'); 
-const { Reader } = require('@skgrush/bplist-and-nskeyedunarchiver/bplist/reader');
+const { Reader } = require('@skgrush/bplist-and-nskeyedunarchiver/bplist');
+const { buildLeveledLogger, LogLevel } = require('@skgrush/bplist-and-nskeyedunarchiver/share');
 
 async function readBPlistFromFilePath(filePath: string) {
-    const nodeBuffer = await readFile(filePath);
-    const arrayBuffer = nodeBuffer.buffer.slice(
-        nodeBuffer.byteoffset,
-        nodeBuffer.byteOffset + nodeBuffer.byteLength,
-    );
+  const nodeBuffer = await readFile(filePath);
+  const arrayBuffer = nodeBuffer.buffer.slice(
+    nodeBuffer.byteoffset,
+    nodeBuffer.byteOffset + nodeBuffer.byteLength,
+  );
 
-    const reader = new Reader(arrayBuffer);
+  const logger = buildLeveledLogger({ logger: console, level: LogLevel.warn });
+  const reader = new Reader(arrayBuffer, logger);
 
-    const object = reader.buildTopLevelObject();
+  const object = reader.buildTopLevelObject();
 }
 ```
 
@@ -47,11 +49,12 @@ async function readBPlistFromFilePath(filePath: string) {
 import { Reader } from '@skgrush/bplist-and-nskeyedunarchiver/bplist/reader';
 
 async function readBPlistFromBlob(blob: Blob) {
-    const arrayBuffer = await blob.arrayBuffer();
+  const arrayBuffer = await blob.arrayBuffer();
 
-    const reader = new Reader(arrayBuffer);
+  const logger = buildLeveledLogger({ logger: console, level: LogLevel.warn });
+  const reader = new Reader(arrayBuffer, logger);
 
-    return reader.buildTopLevelObject();
+  return reader.buildTopLevelObject();
 }
 ```
 
