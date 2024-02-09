@@ -3,6 +3,7 @@ import { AcceptedBitLength, deStructWith, getDeStructReaderBySize } from "./de-s
 import { Marker, byteToMarker } from "./markers";
 import { ObjectTableDict } from "./models/object-table-entries";
 import { Uid } from "./models/uid";
+import { ILogger } from '@skgrush/bplist-and-nskeyedunarchiver/shared';
 
 export enum ReadIntMethod {
   unsigned = 1,
@@ -16,10 +17,10 @@ export class BaseReader {
    * First byte must be a {@link Marker.int} which determines the rest of size of the int.
    * Reads the marker byte and the rest of the int, returns the int, and the total number of bytes read.
    */
-  static readDynamicInt(buffer: ArrayBuffer, offset: number, method: ReadIntMethod) {
+  static readDynamicInt(buffer: ArrayBuffer, offset: number, method: ReadIntMethod, logger: ILogger) {
     const markerByte = Number(this.readInt(buffer, offset, 1, ReadIntMethod.unsigned));
 
-    const markerParts = byteToMarker(markerByte, {} as any);
+    const markerParts = byteToMarker(markerByte, {} as any, logger);
     if (markerParts?.marker !== Marker.int) {
       throw new Error(`dynamic int was not an int, was ${markerParts?.marker}`);
     }

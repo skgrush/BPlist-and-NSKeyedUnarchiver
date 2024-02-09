@@ -6,6 +6,7 @@ import { ObjectTableArrayLike, ObjectTableDict, ObjectTableOutput } from "./mode
 import { OffsetTable } from "./models/offset-table";
 import { Trailer } from "./models/trailer";
 import { ObjRef } from "./types/bplist-index-aliases";
+import { ILogger } from '@skgrush/bplist-and-nskeyedunarchiver/shared';
 
 function isNotUndefined<T>(o: T): o is Exclude<T, undefined> {
   return o !== undefined;
@@ -20,21 +21,26 @@ export class Reader extends BaseReader {
   readonly offsetTable: OffsetTable;
   readonly objectTable: ObjectTable;
 
-  constructor(buffer: ArrayBuffer) {
+  readonly logger: ILogger;
+
+  constructor(buffer: ArrayBuffer, logger: ILogger) {
     super();
+
+    this.logger = logger;
+
     const magicNumber = Reader.readAscii(buffer, 0, bplistMagicNumber.length);
     if (magicNumber !== bplistMagicNumber) {
       throw new Error(`Invalid magicNumber (at start of file); must be ${bplistMagicNumber} but got ${JSON.stringify(magicNumber)}`);
     }
     this.version = Reader.readAscii(buffer, bplistMagicNumber.length, versionByteLength);
     if (this.version !== '00') {
-      console.warn('WARN: version is not 00 and will likely have issues / fail! version = %s', this.version);
+      logger.warn('WARN: version is not 00 and will likely have issues / fail! version = %s', this.version);
     }
 
-    this.trailer = Trailer.fromBuffer(buffer);
-    console.debug('DBG: Trailer found: %O', this.trailer);
-    this.offsetTable = new OffsetTable(buffer, this.trailer);
-    this.objectTable = new ObjectTable(buffer, this.trailer, this.version);
+    this.trailer = Trailer.fromBuffer(buffer, logger);
+    logger.debug('DBG: Trailer found: %O', this.trailer);
+    this.offsetTable = new OffsetTable(buffer, this.trailer, logger);
+    this.objectTable = new ObjectTable(buffer, this.trailer, this.version, logger);
   }
 
   buildTopLevelObject() {
@@ -78,7 +84,7 @@ export class Reader extends BaseReader {
         .filter(isNotUndefined);
 
       if (pairs.some(([k]) => typeof k !== 'string')) {
-        console.warn('non-string keys found in pairs', pairs);
+        this.logger.warn('non-string keys found in pairs', pairs);
       }
 
       output = Object.freeze(

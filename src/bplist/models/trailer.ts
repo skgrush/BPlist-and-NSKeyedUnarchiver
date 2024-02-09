@@ -1,4 +1,5 @@
 import { deStruct } from "../de-struct";
+import { ILogger } from '@skgrush/bplist-and-nskeyedunarchiver/shared';
 
 export class Trailer {
   static readonly trailerByteLength = 32;
@@ -16,7 +17,7 @@ export class Trailer {
     readonly _trailerOffset: number,
   ) { }
 
-  static fromBuffer(buffer: ArrayBuffer) {
+  static fromBuffer(buffer: ArrayBuffer, logger: ILogger) {
     const trailerOffset = buffer.byteLength - this.trailerByteLength;
     const trailerView = new DataView(buffer, trailerOffset + this.unusedLeadingBytes);
 

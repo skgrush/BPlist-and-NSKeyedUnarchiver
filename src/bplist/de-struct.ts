@@ -16,7 +16,7 @@ type DeStructWithResult<Fns extends ReaderArray> = {
 }
 
 /**
- *
+ * TODO:
  * @throws RangeError if reading out of bounds
  */
 export function deStruct<const Ts extends BitLengthArray>(

@@ -11,7 +11,11 @@ export const tsup: Options = {
   minify: false,
   bundle: true,
   skipNodeModulesBundle: true,
-  entryPoints: ["src/bplist/index.ts", "src/NSKeyedUnarchiver/index.ts"],
+  entry: [
+    "src/shared/index.ts",
+    "src/bplist/index.ts",
+    "src/NSKeyedUnarchiver/index.ts",
+  ],
   watch: false,
   target: "node20",
   treeshake: true,

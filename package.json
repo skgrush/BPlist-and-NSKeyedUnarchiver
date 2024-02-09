@@ -29,6 +29,13 @@
       "esm2022": "./NSKeyedUnarchiver/index.mjs",
       "import": "./NSKeyedUnarchiver/index.mjs",
       "require": "./NSKeyedUnarchiver/index.js"
+    },
+    "./shared": {
+      "types": "./shared/index.d.mts",
+      "esm": "./shared/index.mjs",
+      "esm2022": "./shared/index.mjs",
+      "import": "./shared/index.mjs",
+      "require": "./shared/index.js"
     }
   },
   "devDependencies": {

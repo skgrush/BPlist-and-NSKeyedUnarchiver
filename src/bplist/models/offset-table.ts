@@ -2,6 +2,7 @@ import { deStructWith, getDeStructReaderBySize } from "../de-struct";
 import { assert } from "../assert";
 import { Trailer } from "./trailer";
 import { ObjRef, ObjectTableOffset } from "../types/bplist-index-aliases";
+import { ILogger } from '@skgrush/bplist-and-nskeyedunarchiver/shared';
 
 /**
  * Maps ObjRefs (indicies) to full-file-offsets pointing to objects
@@ -14,7 +15,7 @@ export class OffsetTable {
 
   private readonly _table: ObjectTableOffset[];
 
-  constructor(buffer: ArrayBuffer, trailer: Trailer) {
+  constructor(buffer: ArrayBuffer, trailer: Trailer, logger: ILogger) {
     const { offsetTableOffset, offsetIntSize, _trailerOffset: trailerOffset } = trailer;
 
     this.offsetTableOffset = Number(offsetTableOffset);

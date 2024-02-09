@@ -1,5 +1,6 @@
 import { assert } from "./assert";
 import { IParseContext } from "./parse-context";
+import { ILogger } from '@skgrush/bplist-and-nskeyedunarchiver/shared';
 
 export enum Marker {
   null = 0b0000_0000, // 0x00
@@ -57,7 +58,7 @@ export type MarkerByteParts = {
   readonly lowerNibble: number;
 }
 
-export function byteToMarker(byte: number, pc: IParseContext): MarkerByteParts | null {
+export function byteToMarker(byte: number, pc: IParseContext, logger: ILogger): MarkerByteParts | null {
   assert(((byte | 0) & 0xFF) === byte, `byte arg is not an integral byte: ${byte}`);
 
   const upperNibbleMasked = byte & 0xF0;
@@ -71,7 +72,7 @@ export function byteToMarker(byte: number, pc: IParseContext): MarkerByteParts |
   }
 
   if (Marker[marker] === undefined) {
-    console.warn('byte upper nibble is unknown', { byte, upperNibbleMasked, pc });
+    logger.warn('byte upper nibble is unknown', { byte, upperNibbleMasked, pc });
     return null;
   }
 

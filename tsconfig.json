@@ -103,6 +103,9 @@
     "paths": {
       "@skgrush/bplist-and-nskeyedunarchiver/bplist": [
         "./src/bplist/index.ts"
+      ],
+      "@skgrush/bplist-and-nskeyedunarchiver/shared": [
+        "./src/shared/index.ts"
       ]
     }
   },
